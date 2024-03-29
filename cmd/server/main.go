@@ -1,10 +1,15 @@
 package main
 
 import (
+	"GolangQuizlet/internal/app/handler"
+	"GolangQuizlet/internal/app/repository"
+	"GolangQuizlet/internal/app/service"
 	"GolangQuizlet/internal/config"
-	mwLogger "GolangQuizlet/pkg/logger"
-
 	"GolangQuizlet/pkg/db"
+	mwLogger "GolangQuizlet/pkg/logger"
+	"fmt"
+	"net/http"
+
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"log/slog"
@@ -19,17 +24,29 @@ const (
 
 func main() {
 	cfg := config.MustLoad()
-
+	//pool:=db.NewPool(cfg.)
 	log := setupLogger(cfg.Env)
-
-	log.Info("starting GolangQuizlet", slog.String("env", cfg.Env))
-	log.Debug("Debug messages are enabled")
-
-	_, err := db.DbConnection()
+	dbConnect, err := db.DbConnection()
 	if err != nil {
 		log.Error("Error connect to db", err)
 		os.Exit(1)
 	}
+	defer dbConnect.Close()
+
+	quizRepo := repository.NewQuizRepository(dbConnect)
+	quizService := service.NewQuizService(quizRepo)
+	quizHandler := handler.NewQuizHandler(quizService)
+
+	http.HandleFunc("/next", quizHandler.GetNextQuestion)
+	http.HandleFunc("/check", quizHandler.CheckAnswer)
+
+	fmt.Println("server started on port 8080")
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		fmt.Println("Failed to start server: %v", err)
+	}
+
+	log.Info("starting GolangQuizlet", slog.String("env", cfg.Env))
+	log.Debug("Debug messages are enabled")
 
 	router := chi.NewRouter()
 
