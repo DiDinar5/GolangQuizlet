@@ -24,7 +24,7 @@ type HTTPServer struct {
 }
 
 func MustLoad() *Config {
-	os.Setenv("CONFIG_PATH", "./config/local.yaml")
+	os.Setenv("CONFIG_PATH", "./pkg/config/local.yaml")
 
 	configPath := os.Getenv("CONFIG_PATH")
 	if configPath == "" {

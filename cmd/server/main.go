@@ -2,8 +2,11 @@ package main
 
 import (
 	"GolangQuizlet/internal/config"
-	"GolangQuizlet/internal/storage"
-	"fmt"
+	mwLogger "GolangQuizlet/pkg/logger"
+
+	"GolangQuizlet/pkg/db"
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 	"log/slog"
 	"os"
 )
@@ -18,17 +21,24 @@ func main() {
 	cfg := config.MustLoad()
 
 	log := setupLogger(cfg.Env)
+
 	log.Info("starting GolangQuizlet", slog.String("env", cfg.Env))
 	log.Debug("Debug messages are enabled")
 
-	_, err := storage.DbConnection()
+	_, err := db.DbConnection()
 	if err != nil {
-		fmt.Println(err)
+		log.Error("Error connect to db", err)
+		os.Exit(1)
 	}
-	fmt.Println("Db Successfully connected")
 
-	//init storage: postgres
-	//init router : chi, chi render
+	router := chi.NewRouter()
+
+	router.Use(middleware.RequestID)
+	router.Use(middleware.Logger)
+	router.Use(mwLogger.New(log))
+	router.Use(middleware.Recoverer)
+	router.Use(middleware.URLFormat)
+
 	//run server :
 }
 func setupLogger(env string) *slog.Logger {
@@ -36,7 +46,7 @@ func setupLogger(env string) *slog.Logger {
 	switch env {
 	case envLocal:
 		log = slog.New(
-			slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
+			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
 		)
 	case envDev:
 		log = slog.New(
