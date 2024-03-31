@@ -2,6 +2,7 @@ package service
 
 import (
 	"GolangQuizlet/internal/domain"
+	"context"
 	"math/rand"
 )
 
@@ -34,4 +35,7 @@ func (s *QuizServiceImpl) CheckAnswer(questionID, answer int) (bool, error) {
 	}
 
 	return false, nil
+}
+func (s *QuizServiceImpl) InsertQuestion(ctx context.Context, input domain.Question) error {
+	return s.repo.InsertQuestion(ctx, input)
 }
